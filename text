@@ -1,0 +1,83 @@
+<form method="post" action="">
+            <?php
+            // Include the necessary files and initialize the session if needed
+            include 'connection.php';
+            session_start();
+
+
+            // Check if the email parameter is present in the URL
+            if (isset($_GET['email'])) {
+                $email = $_GET['email'];
+
+                // Retrieve owner details from the database based on email
+                $query = "SELECT * FROM owner WHERE Email = ?";
+                $stmt = mysqli_stmt_init($conn);
+
+                if (mysqli_stmt_prepare($stmt, $query)) {
+                    mysqli_stmt_bind_param($stmt, "s", $email);
+                    mysqli_stmt_execute($stmt);
+
+                    $result = mysqli_stmt_get_result($stmt);
+
+                    if ($result && mysqli_num_rows($result) > 0) {
+                        $row = mysqli_fetch_assoc($result);
+
+                        // Extract data from the row
+                        $firstname = $row['First_name'];
+                        $lastname = $row['Last_name'];
+                        $phone = $row['Phone'];
+                        $postcode = $row['Postcode'];
+                        $email = $row['Email'];
+                    } else {
+                        // Handle error if no owner found
+                        echo 'Owner not found.';
+                        exit();
+                    }
+
+                    // Free the result set
+                    mysqli_free_result($result);
+                    mysqli_stmt_close($stmt);
+                } else {
+                    // Handle error if preparation fails
+                    echo 'Invalid request.';
+                    exit();
+                }
+            } else {
+                // Handle error if email is not present
+                echo 'Invalid request.';
+                exit();
+            }
+
+
+            // Check if the form is submitted
+            if ($_SERVER["REQUEST_METHOD"] == "POST") {
+                // Retrieve form data
+                $new_firstname = $_POST["firstname"];
+                $new_lastname = $_POST["lastname"];
+                $new_phone = $_POST["phone"];
+                $new_postcode = $_POST["postcode"];
+                $new_email = $_POST["email"];
+                $new_password = $_POST["password"];
+
+                // Update data in the 'owner' table
+                $update_query = "UPDATE owner SET First_name = ?, Last_name = ?, Phone = ?, Postcode = ?, Email = ?, Password = ? WHERE OwnerID = ?";
+                $stmt = mysqli_stmt_init($conn);
+
+                if (mysqli_stmt_prepare($stmt, $update_query)) {
+                    // Hash the new password
+                    $hashedPassword = password_hash($new_password, PASSWORD_DEFAULT);
+
+                    mysqli_stmt_bind_param($stmt, "ssssssi", $new_firstname, $new_lastname, $new_phone, $new_postcode, $new_email, $hashedPassword, $owner_id);
+                    mysqli_stmt_execute($stmt);
+                    mysqli_stmt_close($stmt);
+
+                    echo '<script>alert("Owner updated successfully!");</script>';
+                } else {
+                    echo '<script>alert("Error updating owner: ' . mysqli_error($conn) . '");</script>';
+                }
+
+                // Close the database connection
+                mysqli_close($conn);
+                header("Location: DashboardOwner.php");
+            }
+            ?>
